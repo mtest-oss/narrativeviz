@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<meta charset='utf-8'>
+
+<head>
+	<link rel="stylesheet" type="text/css" href="dvstyle.css">
+	<title> COVID-19 Cases In USA - Overview </title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://d3js.org/topojson.v2.min.js"></script>
+	<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+</head>
+
+<body bgcolor="#6CB4EE">
+    <div class="toppane">
+        <h1 id="Heading1" style="color:white;"> COVID-19 Cases United States of America </h1>
+    </div>
+    </br>
+        <a href="StateWise.html" class="next" style="float:right;font-size:24px" >Next &raquo;</a>
+    </br>
+    </br>
+    <div class="para" style="width:1024;height:80">
+        <p style="text-align:left;font-size:20px;color:black;width:1024";>
+            Coronavirus Disease 2019(COVID-19) is a contagious disease caused by virus, SARS-Cov-2 (Severe Acute Respiratory Syndrome Coronavirus 2).
+            This was first identified in Wuhan, China in December 2019. This quickly spread across the world causing COVID-19 pandemic. COVID-19 cases
+            are tracked across the world. Here, you can see the tracking of the COVID-19 cases across the United States of America since the year 2020.
+            You can see the hotspots are brighter color (red) and lesser affected states are light colored. Hover mouse over each state to see the
+            confirm cases and death cases.
+        </p>
+    </div>
+    <div>
+        </br> </br> </br>
+        <input type="radio" id="rChoice1" name="rSelMap" value="Confirmed" checked> Confirmed&nbsp;
+        <input type="radio" id="rChoice2" name="rSelMap" value="Deaths"> Deaths&nbsp;
+    </div>
+    <div>
+        <center>
+        <script>
+        
+        // Features of the annotation
+        var annotations = [
+            {
+                note: {
+                    label: "Here is the annotation label",
+                    title: "Annotation title"
+                },
+				
+                x: 500,
+                y: 500,
+                dy: 250,
+                dx: 20
+            }
+        ]
+
+
+        var maxconfirm = 0;
+        var maxdeath = 0;
+        var confirm = [];
+        var death = [];
+        var colorScale;
+        var tmpcase;
+        var variation;
+                
+        // Add annotation to the chart
+        var makeAnnotations = d3.annotation().annotations(annotations)
+        
+            //const colorScale = d3.scaleLinear().domain([0,52]).range(["#00806D", "#00BC4C", "#00F200", "#85FB44"].reverse());
+        const width = 1600;
+        const height = 900;
+        
+            var svg;
+            var tooltip;
+            var div;
+            var projection;
+            var path;
+
+            var rSelMapVal = "Confirmed";
+
+            // Read the files
+            d3.queue()
+            .defer(d3.json, "us-states.json")
+            .defer(d3.csv, "us-states-cases.csv")
+            .await(ready)
+
+        function ready(error, data, cases) {
+            //console.log(cases)
+            //console.log(data.features)
+            //console.log(data.features.length)
+            var names = {};
+            var abv = {};
+            for(var j=0; j<data.features.length; j++) {
+                var jsonState = data.features[j].properties.name;
+                //console.log(jsonState)
+                names[data.features[j].id]=data.features[j].properties.name;
+                abv[data.features[j].id]=data.features[j].properties.abv;
+            }
+            
+            var dfips = [];
+            var index = 0;
+            cases.forEach(function(d) {
+            //var jsonState = data.features[j].properties.name;
+                //console.log(d.fips, d.cases)
+                confirm[d.fips] = +d.cases
+                death[d.fips] = +d.deaths
+                
+                dfips[index] = d.fips
+                if (index <56)
+                    index = index + 1
+                else
+                    index=0
+                //console.log(cases.columns[2][i])
+                //names[data.features[j].id]=data.features[j].properties.name;
+                //abv[data.features[j].id]=data.features[j].properties.abv;
+            })
+
+            for (var i=0; i<56; i++)
+            {
+                var ne = dfips[i];
+                //console.log("ne", ne, "abv", abv[ne]);
+                if (maxconfirm < confirm[ne])
+                    maxconfirm = confirm[ne];
+                if (maxdeath < death[ne])
+                    maxdeath = death[ne];
+
+            }
+            console.log("maxconfirm", maxconfirm)
+        
+            //let maxconfirm = d3.max(cases.features, d=>d.properties.cases);
+            console.log("Call array max()");
+            //let maxconfirm = confirm.max();
+            //console.log("maxconfirm cases", maxconfirm);
+
+            d3.selectAll("input[name='rSelMap']")
+               .on("click", function() {
+                          rSelMapVal = this.value
+                          console.log("Selected Radio:", this.value, rSelMapVal)
+                          plotmap(rSelMapVal)
+                        }
+                   );
+            reinit();
+            plotmap(rSelMapVal);
+
+            function reinit() {
+                d3.selectAll("path").remove();
+
+                svg = d3.select("body").append("svg")
+                    .attr("width", width-100)
+                    .attr("height", height);
+
+                tooltip = d3.select(".home").append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
+                div = d3.select("body")
+                    .append("div")   
+                    .attr("class", "tooltip")               
+                    .style("opacity", 0);
+
+                xScale = d3.scaleBand().range([0,width-350]).padding(0.2),
+                            yScale = d3.scaleLinear().range([height-115, 10]);
+
+                g = svg.append("g")
+                            .attr("transform", "translate(" + 100 + "," + 100 + ")");
+            }
+            
+            
+            //plotmap(0);
+            function plotmap(rSelMapVal) {
+
+                if (rSelMapVal == "Confirmed") {
+                    console.log("plot 0");
+                    colorScale = d3.scaleLinear().domain([0, maxconfirm]).range(["white", "purple"]);
+                    tmpcase = maxconfirm;
+                    variation = confirm;
+                } else {
+                    console.log("plot 1");
+                    colorScale = d3.scaleLinear().domain([0, maxdeath]).range(["white", "red"]);
+                    tmpcase = maxdeath;
+                    variation = death;
+                }
+
+                d3.selectAll("svg").remove();
+
+                svg = d3.select("body").append("svg")
+                        .attr("width", width)
+                        .attr("height", height);
+
+                    tooltip = d3.select(".home").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+                    
+                    div = d3.select("body")
+                        .append("div")   
+                        .attr("class", "tooltip")               
+                        .style("opacity", 0);
+                    
+                // Scale the Map
+                    projection = d3.geoAlbersUsa()
+                        .translate([width / 2, height / 2])
+                        .scale([1024]);
+                    path = d3.geoPath().projection(projection);
+                //co
+                
+                svg.selectAll('path')
+                    .data(data.features)	
+                    .enter()
+                    .append('path')
+                    .attr("d", path)
+                    .style('fill', d => colorScale(variation[d.id]))
+                    .on('mousemove', function (d) {
+                        div.transition()		
+                            .duration(200)		
+                            .style("opacity", .9);		
+                        div	.html(names[d.id] + "<br/>" + "Confirm: " + confirm[d.id] + "<br/>" + "Deaths: " + death[d.id])	
+                            .style("left", (d3.event.pageX) + 10 +"px")		
+                            .style("top", (d3.event.pageY - 28) + 10 + "px");	
+                    })					
+                    .on("mouseout", function (d, i) {
+                    div.transition()		
+                        .duration(500)		
+                        .style("opacity", 0);	
+                    })
+                
+                var g = svg.append("g")
+                    .attr("class", "states-names")
+                    .selectAll("text")
+                    .data(data.features)
+                    .enter()
+                    .append("svg:text")
+                    .text(function(d){
+                        return abv[d.id];
+                    })
+                    .attr("x", function(d){
+                        return path.centroid(d)[0];
+                    })
+                    .attr("y", function(d){
+                        return  path.centroid(d)[1];
+                    })
+                    .attr("text-anchor","middle")
+                    .attr('fill', 'black');
+                    
+
+        //https://www.visualcinnamon.com/2016/05/smooth-color-legend-d3-svg-gradient/
+        //https://en.wikipedia.org/wiki/COVID-19
+        //https://ndc.services.cdc.gov/case-definitions/coronavirus-disease-2019-2021/
+                //var width = 1000,height = 500;
+
+                var lsvg = d3.select("body")
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", 150)
+                    .attr("class", "legend");
+                    //.attr("transform", "translate(10,0)");
+                    
+                var grad = lsvg.append("defs")
+                    .append("linearGradient")
+                    .attr("id", "gradient")
+                    .attr("x1", "100%")
+                    .attr("x2", "100%")
+                    .attr("y1", "100%")
+                    .attr("y2", "100%");
+                    
+                grad.selectAll("g").append("stop")
+                    .attr("offset", "0%")
+                    .style("stop-color", "white")
+                    .style("stop-opacity", 0.6);
+
+                grad.append("stop")
+                    .attr("offset", "100%")
+                    .style("stop-color", "purple")
+                    .style("stop-opacity", 0.6);
+
+                lsvg.append("rect")
+                    .attr("x", 450)
+                    .attr("y", 20)
+                    .attr("width", 720)
+                    .attr("height", 10)
+                    .style("fill", "url(#gradient)");
+                    //.style("fill", "white");
+                    //.attr("transform", "translate(10, -140)");
+                //console.log("Debug End");
+
+                svg.append("text")
+                    .attr("x", 450)
+                    .attr("y", 790)
+                    .style("fill", "yellow")
+                    .style("font-size", "20px")
+                    .text("Gradiation of color represents number of confirmed cases from highest(red) to lowest(white).");
+
+				
+                    //console.log("try the display");
+                var axis = d3.scaleLinear().range([600,0]).domain([tmpcase,0 ]);
+                var yaxis = d3.axisBottom(axis);
+                svg.append("g")
+                        .attr("class", "y axis")
+                        .attr("transform", "translate(450,30)")
+                        .call(yaxis)
+						
+            };
+            svg.append("g").call(makeAnnotations);
+			/*
+            d3.select("body")
+                .append("g")
+                .call(makeAnnotations)*/
+        }
+            </script>
+         </center>
+        </div>
+	</body>
+</html>
