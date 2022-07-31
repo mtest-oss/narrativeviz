@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Initialize a select button -->
+<select id="selectButton"></select>
+<style>
+/* Style for Custom Tooltip */
+	#Linecharttooltip {   
+		position: absolute;           
+		text-align: center;           
+		width: 110px;                  
+		height: 40px;                 
+		padding: 2px;             
+		font: 12px sans-serif;        
+		background: white;   
+		border: 0px;      
+		border-radius: 8px;           
+		pointer-events: none;         
+	}
+</style>
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz">
+<svg id="linechart" width="2048" height="2048"></svg>
+</div>
+
+<body bgcolor="#CCFFFF">
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 100, bottom: 30, left: 30},
+    width = 700 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+d3.queue()
+	.defer(d3.json, "us-states.json")
+	.defer(d3.csv, "us-states-cases.csv")
+	.await(ready)
+	
+
+
+function ready(error, data, cases) {
+   console.log("Ready function")
+   console.log("cases", cases)
+   var names = {};
+   var abv = {};
+   for(var j=0; j<data.features.length; j++) {
+            var jsonState = data.features[j].properties.name;
+			names[+data.features[j].id]=data.features[j].properties.name;
+			//console.log("id", data.features[j].properties.abv);
+			abv[+data.features[j].id]=data.features[j].properties.abv;
+	}
+	
+    //console.log(d3.timeParse("%Y-%m-%d")(cases.date));
+
+	var confirm = {};
+	var death = {};
+	var dfips = [];
+	//for(var i=0; i<cases.length; i++) {
+	var index = 0;
+	var statename = [];
+	//statename[0]="All States";
+	let newcase = new Array()
+	cases.forEach(function(d) {
+		//var jsonState = data.features[j].properties.name;
+		//	console.log(d.fips, d.cases)
+		confirm[+d.fips] = +d.cases
+		death[+d.fips] = +d.deaths
+		dfips[index] = +d.fips
+		statename[+d.fips] = d.state;
+		if (index <56)
+			index = index + 1
+			else
+              index=0			
+			//console.log(d.date);
+	});
+	
+	var maxconfirm = 0;
+	var maxdeath = 0;
+	var state=[];
+	
+	for (var i=0; i<56; i++)
+	{
+		var ne = dfips[i];
+		console.log("ne", ne, "abv", abv[ne]);
+		if (maxconfirm < confirm[ne])
+		   maxconfirm = confirm[ne]
+		if (maxdeath < death[ne])
+		   maxdeath = death[ne]
+		
+		state[i] = abv[ne];
+		
+		let x = new Object()
+		x["state"] = abv[ne];
+		x["confirm"] = confirm[ne];
+		x["deaths"] = death[ne];
+		newcase.push(x);
+	}
+	console.log("maxconfirm", maxconfirm)
+	
+	newcase.sort((a, b) => d3.ascending(a.confirm, b.confirm));
+	
+  
+    filstatename = statename.filter(Boolean);
+  
+var sel = 0;
+/*var svg = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+*/
+	
+	    // add the options to the button
+    d3.select("#selectButton")
+	  //.append("g")
+	  //.apppend("select")
+	  .attr("id", "selstate")
+      .selectAll('myOptions')
+     	.data(filstatename)
+      .enter()
+    	.append('option')
+      .text(function (d) { return d; }) // text showed in the menu
+      .attr("value", function (d,i) { console.log(d,i);return i; }) // corresponding value returned by the button
+	d3.select("#selstate").property("selectedIndex", sel);
+	d3.select("#selstate") 
+	.on("change", function(d) {
+		//sel = +this.value;
+		//console.log(+this.value);
+		sel = +this.value;
+		plotline(sel);
+	})
+	plotline(sel);
+
+
+	
+	
+function plotline (sel) {	
+		//console.log("Cases", cases);
+		let progstate = new Array();
+		//if (sel!=0)
+		console.log("sel: ", sel, "name", filstatename[sel]);
+		//{
+		d3.selectAll('svg > *').remove();
+		var svg = d3.select("#linechart")
+			.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom);
+	
+		cases.forEach(function(d) {
+			if (filstatename[sel] == d.state) {
+				//console.log("State selected", d.state);
+				var selstate = new Object();
+				selstate["date"] = new Date(d.date);
+				selstate["confirm"] = +d.cases;
+				selstate["deaths"] = +d.deaths;
+				progstate.push(selstate);
+			}
+		})
+		// Add X axis --> it is a date format
+		  
+    var xScale = d3.scaleTime().domain(d3.extent(progstate, d => d.date)).range([ margin.left + 50, width + 200]);
+    svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xScale));
+
+    // Add Y axis
+    var yScale = d3.scaleLinear()
+      .range( [height-500,560])
+      .domain([maxconfirm,0]);
+    svg.append("g")
+      .call(d3.axisLeft(yScale).ticks(20))
+	  .attr("transform", "translate(80,0)");
+	
+
+// Create the circle that travels along the curve of chart
+  var focus = svg.append('g')
+    .append('circle')
+      .style("fill", "none")
+      .attr("stroke", "black")
+      .attr('r', 8.5)
+      .style("opacity", 0)
+
+  // Create the text that travels along the curve of chart
+  var focusText = svg
+    .append('g')
+    .append('text')
+      .style("opacity", 0)
+      .attr("text-anchor", "left")
+      .attr("alignment-baseline", "middle")
+
+	confirmline = d3.line().x(d => xScale(d.date)).y(d => yScale(d.confirm));
+	deathsline = d3.line().x(d => xScale(d.date)).y(d => yScale(d.deaths));
+	console.log(progstate);
+// Initialize line with group a
+	svg.append("path")
+		.datum(progstate)
+		.style("fill", "none")
+		.attr("stroke", "green")
+		.style("stroke-width", 2)
+		.attr("d", confirmline)
+		.attr("transform", "translate(0,0)")
+	svg.append('rect')
+    .style("fill", "none")
+    .style("pointer-events", "all")
+    .attr('width', width)
+    .attr('height', height)
+    .on('mouseover', mouseover)
+    .on('mousemove', mousemove)
+    .on('mouseout', mouseout);
+
+  // What happens when the mouse move -> show the annotations at the right positions.
+  function mouseover() {
+  console.log("Mouseover");
+    focus.style("opacity", 1)
+    focusText.style("opacity",1)
+  }
+
+  function mousemove() {
+    // recover coordinate we need
+	console.log("Mousemove");
+    var x0 = xScale.invert(d3.mouse(this)[0]);
+    var i = d3.bisector(data, x0, 1);
+    selectedData = progstate[i]
+    focus
+      .attr("cx", xScale(selectedData.x))
+      .attr("cy", yScale(selectedData.y))
+    focusText
+      .html("x:" + selectedData.x + "  -  " + "y:" + selectedData.y)
+      .attr("x", xScale(selectedData.x)+15)
+      .attr("y", yScale(selectedData.y))
+    }
+  function mouseout() {
+    focus.style("opacity", 0)
+    focusText.style("opacity", 0)
+  }
+
+
+	svg.append("path")
+		.datum(progstate)
+		.style("fill", "none")
+		.attr("stroke", "red")
+		.style("stroke-width", 2)
+		.attr("d", deathsline)
+		.attr("transform", "translate(0,0)");
+    
+}
+}
+
+</script>
+</body>

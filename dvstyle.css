@@ -1,0 +1,73 @@
+path{
+	stroke: black;
+	stroke-width: 0.5px;
+	fill: grey;
+}
+	/* On mouse hover, lighten state color */
+path:hover {
+	fill-opacity: 0.9;
+	fill:"yellow";
+}
+
+/* Style for Custom Tooltip */
+	div.tooltip {   
+		position: absolute;           
+		text-align: left;           
+		width: 120px;                  
+		height: 40px;                 
+		padding: 2px;             
+		font: 12px sans-serif;        
+		background: white;   
+		border: 0px;      
+		border-radius: 8px;           
+		pointer-events: none;         
+	}
+	
+h1 {
+	text-align: center;
+}
+
+a {
+  text-decoration: none;
+  display: inline-block;
+  padding: 8px 16px;
+}
+
+a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.prev {
+  background-color: #04A000;
+  color: white;
+}
+
+.next {
+  background-color: #04AA6D;
+  color: white;
+}
+
+.toppane {
+  width: 100%;
+  height: 100px;
+  border-collapse: collapse;
+  background-color: #4da6ff;
+  text-align: center;
+  color:white
+}
+
+.slide {
+  width: 100%;
+  height: 100px;
+  top: 100px;
+  border-collapse: collapse;
+}
+
+/* Style the footer */
+.footer {
+  background-color: #777;
+  padding: 10px;
+  text-align: center;
+  color: white;
+}
