@@ -5,7 +5,7 @@
 <head>
 	
 	<link rel="stylesheet" type="text/css" href="dvstyle.css">
-	<title> COVID-19 Cases USA - State Comparision </title>
+	<title> COVID-19 Cases USA - State Specific </title>
 	<script src="https://d3js.org/d3.v4.min.js"></script>
 	<script src="https://d3js.org/topojson.v2.min.js"></script>
 	<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
@@ -20,8 +20,9 @@
 	</br>
 	</br>
 	<p style="text-align:left;font-size:20px;color:black">
-		Trends of COVID-19 cases in each state can be seen here. Select the state in drop down list to see the trends of confirm cases
-		and death cases. 
+		Trends of COVID-19 cases in each state can be seen here. Select case(Confirm, Death) and state to learn
+		about the trends for the specific state and case. Trend helps to understand how cases are increasing or
+		decreasing for a span of time.
 	</p>
 	</br>
 	<div>
@@ -238,7 +239,7 @@ function plotline (sel,rSelVal) {
 								 .style("font-weight", 900)
 								 .attr('dy','0.50em')
 								 .attr('transform', 'translate(600,140)');
-		var msg2 = svg.append('text').text('see the confirmed cases and death cases')
+		var msg2 = svg.append('text').text('see the confirmed cases and death cases until for a given date')
 								 .style('fill', 'pink')
 								 .style("font-size", "20px")
 								 .style("font-weight", 900)
