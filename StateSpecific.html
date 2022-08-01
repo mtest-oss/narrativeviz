@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<meta charset="utf-8">
+
+<head>
+	
+	<link rel="stylesheet" type="text/css" href="dvstyle.css">
+	<title> COVID-19 Cases USA - State Comparision </title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://d3js.org/topojson.v2.min.js"></script>
+	<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+</head>
+
+<body bgcolor="#6CB4EE">
+	<div class="toppane">
+		<h1 id="Heading1" style="color:white"> COVID-19 Cases State Specific Trends </h1>
+	</div>
+	</br>
+	<a href="StateWise.html" class="prev" style="float:right;font-size:24px" > &laquo; Prev</a>
+	</br>
+	</br>
+	<p style="text-align:left;font-size:20px;color:black">
+		Trends of COVID-19 cases in each state can be seen here. Select the state in drop down list to see the trends of confirm cases
+		and death cases. 
+	</p>
+	</br>
+	<div>
+		<p style="text-align:left;font-size:20px;color:black;width:100";><b>Select Case Type</b></p>
+		<input type="radio" id="rChoice1" name="rSel" value="Confirmed" checked> Confirmed&nbsp;
+		<input type="radio" id="rChoice2" name="rSel" value="Deaths"> Deaths&nbsp;
+		<p style="text-align:left;font-size:20px;color:black;width:100";><b>Select States</b></p>
+	    <select id="selectButton">&nbsp;&nbsp;</select>
+	</div>
+
+	<style>
+	/* Style for Custom Tooltip */
+	#Linecharttooltip {   
+		position: absolute;           
+		text-align: center;           
+		width: 110px;                  
+		height: 60px;                 
+		padding: 2px;             
+		font: 12px sans-serif;        
+		background: white;   
+		border: 0px;      
+		border-radius: 8px;           
+		pointer-events: none;         
+	}
+	</style>
+<!-- Create a div where the graph will take place -->
+	<div id="my_dataviz">
+		<svg id="linechart" width="1600" height="900"></svg>
+	</div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 100, bottom: 30, left: 30},
+    width = 1300 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+d3.queue()
+	.defer(d3.json, "us-states.json")
+	.defer(d3.csv, "us-states-cases.csv")
+	.await(ready)
+
+        var annotations = [
+			{
+                note: {
+                    label: "Number of Confirmed cases and Deaths have increased since 2022",
+					title: "",
+					width: 100
+                },
+				color: "white",
+                x: 1070,
+                y: 570,
+                dy: -120,
+                dx: -120,
+				type: d3.annotationCalloutCircle
+            }
+        ]
+
+var bisect = d3.bisector(function(d) { return d.x; }).left;
+
+function ready(error, data, cases) {
+   console.log("Ready function")
+   console.log("cases", cases)
+   var names = {};
+   var abv = {};
+   for(var j=0; j<data.features.length; j++) {
+            var jsonState = data.features[j].properties.name;
+			names[+data.features[j].id]=data.features[j].properties.name;
+			//console.log("id", data.features[j].properties.abv);
+			abv[+data.features[j].id]=data.features[j].properties.abv;
+	}
+	
+    //console.log(d3.timeParse("%Y-%m-%d")(cases.date));
+
+	var confirm = {};
+	var death = {};
+	var dfips = [];
+	//for(var i=0; i<cases.length; i++) {
+	var index = 0;
+	var statename = [];
+	//statename[0]="All States";
+	let newcase = new Array()
+	cases.forEach(function(d) {
+		//var jsonState = data.features[j].properties.name;
+		//	console.log(d.fips, d.cases)
+		confirm[+d.fips] = +d.cases
+		death[+d.fips] = +d.deaths
+		dfips[index] = +d.fips
+		statename[+d.fips] = d.state;
+		if (index <56)
+			index = index + 1
+			else
+              index=0			
+			//console.log(d.date);
+	});
+	
+	var maxconfirm = 0;
+	var maxdeath = 0;
+	var state=[];
+	
+	for (var i=0; i<56; i++)
+	{
+		var ne = dfips[i];
+		console.log("ne", ne, "abv", abv[ne]);
+		if (maxconfirm < confirm[ne])
+		   maxconfirm = confirm[ne]
+		if (maxdeath < death[ne])
+		   maxdeath = death[ne]
+		
+		state[i] = abv[ne];
+		
+		let x = new Object()
+		x["state"] = abv[ne];
+		x["confirm"] = confirm[ne];
+		x["deaths"] = death[ne];
+		newcase.push(x);
+	}
+	console.log("maxconfirm", maxconfirm);
+	
+	newcase.sort((a, b) => d3.ascending(a.confirm, b.confirm));
+	
+  
+    filstatename = statename.filter(Boolean);
+  
+ var sel = 0;
+/*var svg = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+*/
+	
+	    // add the options to the button
+	var rSelVal = "Confirmed";
+	d3.selectAll("input[name='rSel']")
+	  .on("click", function() {
+	                  rSelVal = this.value
+					  console.log("Selected Radio:", this.value, sel, rSelVal)
+					  plotline(sel, rSelVal);
+					});
+	d3.select("#selectButton")
+	   //.append("g")
+	   //.apppend("select")
+	   .attr("id", "selstate")
+       .selectAll('myOptions')
+       .data(filstatename)
+       .enter()
+       .append('option')
+       .text(function (d) { return d; }) // text showed in the menu
+       .attr("value", function (d,i) { console.log(d,i);return i; }) // corresponding value returned by the button
+		
+	d3.select("#selstate").property("selectedIndex", sel);
+	d3.select("#selstate") 
+	.on("change", function(d) {
+		//sel = +this.value;
+		//console.log(+this.value);
+		sel = +this.value;
+		plotline(sel, rSelVal);
+	})
+	
+	plotline(sel, rSelVal);
+
+//function TryformatDate(date)
+ const formatDate = (date) => {
+  let d = new Date(date);
+  let month = (d.getMonth() + 1).toString();
+  let day = d.getDate().toString();
+  let year = d.getFullYear();
+  if (month.length < 2) {
+    month = '0' + month;
+  }
+  if (day.length < 2) {
+    day = '0' + day;
+  }
+  return [year, month, day].join('-');
+}
+//}
+//console.log(formatDate('Febuary 1, 2021'));
+
+	
+	
+function plotline (sel,rSelVal) {	
+		console.log("rSelVal", rSelVal);
+		let progstate = new Array();
+		//if (sel!=0)
+		console.log("sel: ", sel, "name", filstatename[sel]);
+		//{
+		d3.selectAll('svg > *').remove();
+		
+
+		makeAnnotations = d3.annotation().annotations(annotations)
+		
+		var svg = d3.select("#linechart")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height + margin.top + margin.bottom + 100);
+			//.attr("width", width + margin.left + margin.right)
+			//.attr("height", height + margin.top + margin.bottom);
+	
+		var tooltip = d3.select(".home").append("div")
+			.attr("class", "tooltip")
+			.style("opacity", 0);
+
+		var div = d3.select("body")
+			.append("div")   
+			.attr("class", "tooltip")               
+			.style("opacity", 0);
+			
+		var msg1 = svg.append('text').text('Hover mouse over each state trend line to')
+								 .style('fill', 'pink')
+								 .style("font-size", "20px")
+								 .style("font-weight", 900)
+								 .attr('dy','0.50em')
+								 .attr('transform', 'translate(600,140)');
+		var msg2 = svg.append('text').text('see the confirmed cases and death cases')
+								 .style('fill', 'pink')
+								 .style("font-size", "20px")
+								 .style("font-weight", 900)
+								 .attr('dy','0.50em')
+								 .attr('transform', 'translate(600,160)');
+		cases.forEach(function(d) {
+			if (filstatename[sel] == d.state) {
+				//console.log("State selected", d.state);
+				var selstate = new Object();
+				selstate["date"] = new Date(d.date);
+				selstate["confirm"] = +d.cases;
+				selstate["deaths"] = +d.deaths;
+				progstate.push(selstate);
+			}
+		})
+		// Add X axis --> it is a date format
+		var xScale = d3.scaleTime().domain(d3.extent(progstate, d => d.date)).range([ margin.left + 50, width + 200]);
+		svg.append("g")
+			.call(d3.axisBottom(xScale))
+			.attr("transform", "translate(0," + height + ")");
+
+		// Add Y axis
+		var yScale;
+
+		// Create the circle that travels along the curve of chart
+		var focus = svg.append('g')
+						.append('circle')
+						.style("fill", "none")
+						.attr("stroke", "black")
+						.attr('r', 8.5)
+						.style("opacity", 0)
+
+		// Create the text that travels along the curve of chart
+		var focusText = svg.append('g')
+							.append('text')
+							.style("opacity", 0)
+							.attr("text-anchor", "left")
+							.attr("alignment-baseline", "middle")
+
+		confirmline = d3.line().x(d => xScale(d.date)).y(d => yScale(d.confirm));
+		deathsline = d3.line().x(d => xScale(d.date)).y(d => yScale(d.deaths));
+		console.log(progstate);
+	if (rSelVal == "Confirmed") {
+		console.log("CONFIRMED-----------------------")
+		yScale = d3.scaleLinear()
+						.range( [height-500,560])
+						.domain([maxconfirm,0]);
+		svg.append("g")
+			.call(d3.axisLeft(yScale).ticks(20))
+			.attr("transform", "translate(80,0)");
+			
+		// Initialize line with group a
+		svg.append("path")
+			.datum(progstate)
+			.style("fill", "none")
+			.style("stroke", "purple")
+			.style("stroke-width", 5)
+			.attr("d", confirmline)
+			.attr("transform", "translate(0,0)")
+			.on('mouseover', function (d,i) {
+				//console.log(progstate);
+					var x0 = xScale.invert(d3.mouse(this)[0]);
+					console.log("x", x0);
+					
+					console.log("i", i);
+					//console.log("Time PArse", d3.timeParse("%Y-%m-%d")(x0));
+					console.log("Timeformat", formatDate(x0));
+					var tipconfirm = 0, tipdeath=0, tipdate=formatDate(x0);
+					var found = 0, loopindex = 0;
+					cases.forEach(function(e) {
+						if (found == 0)
+						{
+							if (tipdate == e.date) {
+								console.log("e", e);
+								console.log("Matched", x0);
+								tipconfirm = e.cases;
+								tipdeath = e.deaths;
+								tipdate = e.date;
+								console.log("tipconfirm" + tipconfirm + "tipdeath" + tipdeath + "tipdate" + tipdate);
+								console.log("tipconfirm" + e.cases + "tipdeath" + e.deaths + "tipdate" + e.date);
+								found = 1;
+							}
+							if (found == 0) {
+								loopindex = loopindex + 1;}
+						}
+					})
+					console.log("loopindex = ", loopindex);
+					console.log("found = ", found);
+					div.transition()	
+						.duration(500)		
+						.style("opacity", .9);		
+					div	.html("Date : " + tipdate + "Confirm : " + tipconfirm + "<br/>" + "Death : " + tipdeath)	
+						.style("left", (d3.event.pageX) + 10 +"px")		
+						.style("top", (d3.event.pageY - 28) + 10 + "px");	
+				})
+			.on('mousemove', function (d,i) {
+					//console.log(progstate);
+					var x0 = xScale.invert(d3.mouse(this)[0]);
+					console.log("x", x0);
+					
+					console.log("i", i);
+					//console.log("Time PArse", d3.timeParse("%Y-%m-%d")(x0));
+					console.log("Timeformat", formatDate(x0));
+					var tipconfirm = 0, tipdeath=0, tipdate=formatDate(x0);
+					var found = 0, loopindex = 0;
+					cases.forEach(function(e) {
+						if (found == 0)
+						{
+							if (tipdate == e.date) {
+								console.log("e", e);
+								console.log("Matched", x0);
+								tipconfirm = e.cases;
+								tipdeath = e.deaths;
+								tipdate = e.date;
+								console.log("tipconfirm" + tipconfirm + "tipdeath" + tipdeath + "tipdate" + tipdate);
+								console.log("tipconfirm" + e.cases + "tipdeath" + e.deaths + "tipdate" + e.date);
+								found = 1;
+							}
+							if (found == 0) {
+								loopindex = loopindex + 1;}
+						}
+					})
+					console.log("loopindex = ", loopindex);
+					console.log("found = ", found);
+					div.transition()	
+						.duration(500)		
+						.style("opacity", .9);		
+					div	.html("Date : " + tipdate + "Confirm : " + tipconfirm + "<br/>" + "Death : " + tipdeath)	
+						.style("left", (d3.event.pageX) + 10 +"px")		
+						.style("top", (d3.event.pageY - 28) + 10 + "px");	
+				})
+			.on('click', function(d,i) {
+					//console.log(progstate);
+					var x0 = xScale.invert(d3.mouse(this)[0]);
+					console.log("x", x0);
+					
+					console.log("i", i);
+					//console.log("Time PArse", d3.timeParse("%Y-%m-%d")(x0));
+					console.log("Timeformat", formatDate(x0));
+					var tipconfirm = 0, tipdeath=0, tipdate=formatDate(x0);
+					var found = 0, loopindex = 0;
+					cases.forEach(function(e) {
+						if (found == 0)
+						{
+							if (tipdate == e.date) {
+								console.log("e", e);
+								console.log("Matched", x0);
+								tipconfirm = e.cases;
+								tipdeath = e.deaths;
+								tipdate = e.date;
+								console.log("tipconfirm" + tipconfirm + "tipdeath" + tipdeath + "tipdate" + tipdate);
+								console.log("tipconfirm" + e.cases + "tipdeath" + e.deaths + "tipdate" + e.date);
+								found = 1;
+							}
+							if (found == 0) {
+								loopindex = loopindex + 1;}
+						}
+					})
+					console.log("loopindex = ", loopindex);
+					console.log("found = ", found);
+					div.transition()	
+						.duration(500)		
+						.style("opacity", .9);		
+					div	.html("Date : " + tipdate + "Confirm : " + tipconfirm + "<br/>" + "Death : " + tipdeath)	
+						.style("left", (d3.event.pageX) + 10 +"px")		
+						.style("top", (d3.event.pageY - 28) + 10 + "px");	
+				})
+			.on('mouseout', function (d) {
+					div.transition()		
+					.duration(500)		
+					.style("opacity", 0);	});
+					
+			svg.append("text")
+				.attr("class", "x label")
+				.attr("text-anchor", "center")
+				.attr("x", 405)
+				.attr("y", 585)
+				.attr("dy", ".75em")
+				.text("Months (Quarter)")
+				.style("font-weight", 900);
+				
+			svg.append("text")
+				.attr("class", "y label")
+				.attr("text-anchor", "end")
+				.attr("y", 10)
+				.attr("x", -250)
+				.attr("dy", ".65em")
+				.attr("transform", "rotate(-90)")
+				.text("Confirmed Cases")
+				.style("font-weight", 900);
+
+		}
+		
+		if (rSelVal == "Deaths") {
+			console.log("DEATHS ------------------------")
+			yScale = d3.scaleLinear()
+						.range( [height-500,560])
+						.domain([maxdeath,0]);
+			svg.append("g")
+				.call(d3.axisLeft(yScale).ticks(20))
+				.attr("transform", "translate(80,0)");
+			
+			svg.append("path")
+				.datum(progstate)
+				.style("fill", "none")
+				.style("stroke", "red")
+				.style("stroke-width", 5)
+				.attr("d", deathsline)
+				.attr("transform", "translate(0,0)")
+				.on('mouseover', function (d,i) {
+		//console.log(progstate);
+						var x0 = xScale.invert(d3.mouse(this)[0]);
+						console.log("x", x0);
+						
+						console.log("i", i);
+						//console.log("Time PArse", d3.timeParse("%Y-%m-%d")(x0));
+						console.log("Timeformat", formatDate(x0));
+						var tipconfirm = 0, tipdeath=0, tipdate=formatDate(x0);
+						var found = 0, loopindex = 0;
+						cases.forEach(function(e) {
+							if (found == 0)
+							{
+								if (tipdate == e.date) {
+									console.log("e", e);
+									console.log("Matched", x0);
+									tipconfirm = e.cases;
+									tipdeath = e.deaths;
+									tipdate = e.date;
+									console.log("tipconfirm" + tipconfirm + "tipdeath" + tipdeath + "tipdate" + tipdate);
+									console.log("tipconfirm" + e.cases + "tipdeath" + e.deaths + "tipdate" + e.date);
+									found = 1;
+								}
+								if (found == 0) {
+									loopindex = loopindex + 1;}
+							}
+						})
+						console.log("loopindex = ", loopindex);
+						console.log("found = ", found);
+						div.transition()	
+							.duration(500)		
+							.style("opacity", .9);		
+						div	.html("Date : " + tipdate + "Confirm : " + tipconfirm + "<br/>" + "Death : " + tipdeath)	
+							.style("left", (d3.event.pageX) + 10 +"px")		
+							.style("top", (d3.event.pageY - 28) + 10 + "px");	
+					})
+				.on('mousemove', function (d,i) {
+						//console.log(progstate);
+						var x0 = xScale.invert(d3.mouse(this)[0]);
+						console.log("x", x0);
+						
+						console.log("i", i);
+						//console.log("Time PArse", d3.timeParse("%Y-%m-%d")(x0));
+						console.log("Timeformat", formatDate(x0));
+						var tipconfirm = 0, tipdeath=0, tipdate=formatDate(x0);
+						var found = 0, loopindex = 0;
+						cases.forEach(function(e) {
+							if (found == 0)
+							{
+								if (tipdate == e.date) {
+									console.log("e", e);
+									console.log("Matched", x0);
+									tipconfirm = e.cases;
+									tipdeath = e.deaths;
+									tipdate = e.date;
+									console.log("tipconfirm" + tipconfirm + "tipdeath" + tipdeath + "tipdate" + tipdate);
+									console.log("tipconfirm" + e.cases + "tipdeath" + e.deaths + "tipdate" + e.date);
+									found = 1;
+								}
+								if (found == 0) {
+									loopindex = loopindex + 1;}
+							}
+						})
+						console.log("loopindex = ", loopindex);
+						console.log("found = ", found);
+						div.transition()	
+							.duration(500)		
+							.style("opacity", .9);		
+						div	.html("Date : " + tipdate + "Confirm : " + tipconfirm + "<br/>" + "Death : " + tipdeath)	
+							.style("left", (d3.event.pageX) + 10 +"px")		
+							.style("top", (d3.event.pageY - 28) + 10 + "px");	
+					})
+				.on('mouseout', function (d) {
+						div.transition()		
+						.duration(500)		
+						.style("opacity", 0);	});
+						
+				svg.append("text")
+				.attr("class", "x label")
+				.attr("text-anchor", "center")
+				.attr("x", 405)
+				.attr("y", 585)
+				.attr("dy", ".75em")
+				.text("Months (Quarter)")
+				.style("font-weight", 900);
+				
+			svg.append("text")
+				.attr("class", "y label")
+				.attr("text-anchor", "end")
+				.attr("y", 10)
+				.attr("x", -250)
+				.attr("dy", ".65em")
+				.attr("transform", "rotate(-90)")
+				.text("Death Cases")
+				.style("font-weight", 900);
+
+		}
+		svg.append("g").call(makeAnnotations);
+		
+  // What happens when the mouse move -> show the annotations at the right positions.
+  /*
+  function mouseover() {
+  console.log("Mouseover");
+  }
+  */
+/*
+  function mousemove(d,i) {
+    
+		console.log(d[i].date,"Confirm : " ,d[i].confirm , "Death : " , d[i].deaths);		
+		d3.select("#Linecharttooltip")
+            .html(d.date + "<br/>"  + "Confirm : " + d.confirm + "<br/>" + "Death : " + d.deaths)	
+                //.style("left", (d3.event.clientX + 10) +"px")		
+                //.style("top", (d3.event.clientY) + "px");	
+				.style("left", 1000 +"px")		
+                .style("top", 1000 + "px")
+				.style("display", "block");	
+
+            }	*/	}
+			
+	
+	
+    
+
+}
+
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@
     <title> COVID-19 Cases USA - State Comparision </title>
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="https://d3js.org/topojson.v2.min.js"></script>
+	<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
 </head>
 <body bgcolor="#6CB4EE">
 	<div class="toppane">
@@ -15,17 +16,17 @@
     </br>
     <a href="StateSpecific.html" class="next" style="float:right;font-size:24px" >&nbsp;&nbsp;&nbsp;&nbsp;Next &raquo;</a>
 	<span> </span>
-    <a href="USAMap.html" class="prev" style="float:right;font-size:24px" >&laquo; Prev </a>
+    <a href="index.html" class="prev" style="float:right;font-size:24px" >&laquo; Prev </a>
 	</br>
 	</br>
     <p style="text-align:left;font-size:20px;color:black;width:500";>
         COVID 19 Cases across each state in USA is plotted in bar chart. You can see height of the bar indicateds 
-        the confirm cases andeach state is represented by a bar. States are marked on x-axis. Hover over each state
-        to get the confirm and death cases statistics.
+        the confirm cases andeach state is represented by a bar. States are marked on x-axis.
     </p>
     </br>
-	<div class="slide">
-        </br> </br> </br>
+	<div>
+		</br> </br> </br>
+		<p style="text-align:left;font-size:20px;color:black;width:100";><b>Select Case Type</b></p>
         <input type="radio" id="rChoice3" name="rSelBar" value="Confirmed" checked> Confirmed&nbsp;
         <input type="radio" id="rChoice4" name="rSelBar" value="Deaths"> Deaths&nbsp;
 	</div>
@@ -44,6 +45,7 @@
     var maxconfirm = 0;
     var maxdeath = 0;
     var state=[];
+	
 
     d3.queue()
       .defer(d3.json, "us-states.json")
@@ -119,12 +121,11 @@
         console.log("New array", newcase);
         //console.log(d3.max(confirm));
         //console.log(confirm[dfips]);
-        var selection="Confirm";
-        
-
+        //var selection="Confirm";
         //d3.selectAll("svg").remove();
-        var sel="Confirmed";
+        var sel= "Confirmed";
 		
+		console.log("REACHED HERE -----");
         d3.selectAll("input[name='rSelBar']")
            .on("click", function() {
                       sel = this.value
@@ -162,8 +163,21 @@
         function plotbar(sel) {
             g.selectAll(".bar").remove();
             console.log("sel: ", sel);
+			var msg1 = svg.append('text').text('Hover mouse over each state bar to see')
+									.style('fill', 'pink')
+									.style("font-size", "20px")
+									.style("font-weight", 900)
+									.attr('dy','0.50em')
+									.attr('transform', 'translate(800,250)');
+			var msg2 = svg.append('text').text('the confirmed cases and death cases')
+									.style('fill', 'pink')
+									.style("font-size", "20px")
+									.style("font-weight", 900)
+									.attr('dy','0.50em')
+									.attr('transform', 'translate(800,270)');
             var tmp_confirm;
 			let colorScale;
+			
             if (sel == "Confirmed") {
                 newcase.sort((a, b) => d3.ascending(a.confirm, b.confirm))
                 tmp_confirm = maxconfirm
@@ -206,7 +220,9 @@
                  return d;
              }).ticks(20));
 
+			var yAxisLabel;
             if (sel == "Confirmed") {
+				yAxisLabel = "Confirmed Cases";
                 g.selectAll(".bar")
                  .data(newcase)
                  .enter().append("rect")
@@ -240,6 +256,7 @@
 				.attr("x", width-1000)
 				.attr("y", height + 15)
 				.attr("dy", ".75em")
+				.style("font-weight", 900)
 				.text("States");
 				
 				svg.append("text")
@@ -249,9 +266,11 @@
 				.attr("x", -400)
 				.attr("dy", ".75em")
 				.attr("transform", "rotate(-90)")
-				.text("Confirm Cases");
+				.style("font-weight", 900)
+				.text(yAxisLabel);
 
-            } else {
+            } else { 
+				yAxisLabel = "Death Cases";
                 g.selectAll(".bar")
                  .data(newcase)
                  .enter().append("rect")
@@ -287,6 +306,7 @@
 				.attr("x", width-1000)
 				.attr("y", height + 15)
 				.attr("dy", ".75em")
+				.style("font-weight", 900)
 				.text("States");
 				
 				svg.append("text")
@@ -296,7 +316,8 @@
 				.attr("x", -400)
 				.attr("dy", ".75em")
 				.attr("transform", "rotate(-90)")
-				.text("Confirm Cases");
+				.style("font-weight", 900)
+				.text(yAxisLabel);
             }
         }
     }

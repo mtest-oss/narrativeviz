@@ -23,16 +23,16 @@
             Coronavirus Disease 2019(COVID-19) is a contagious disease caused by virus, SARS-Cov-2 (Severe Acute Respiratory Syndrome Coronavirus 2).
             This was first identified in Wuhan, China in December 2019. This quickly spread across the world causing COVID-19 pandemic. COVID-19 cases
             are tracked across the world. Here, you can see the tracking of the COVID-19 cases across the United States of America since the year 2020.
-            You can see the hotspots are brighter color (red) and lesser affected states are light colored. Hover mouse over each state to see the
-            confirm cases and death cases.
+            You can see the hotspots are brighter color (red) and lesser affected states are light colored.
         </p>
     </div>
     <div>
         </br> </br> </br>
+		<p style="text-align:left;font-size:20px;color:black;width:100";><b>Select Case Type</b></p>
         <input type="radio" id="rChoice1" name="rSelMap" value="Confirmed" checked> Confirmed&nbsp;
         <input type="radio" id="rChoice2" name="rSelMap" value="Deaths"> Deaths&nbsp;
     </div>
-    <div>
+    <div class="main_contents">
         <center>
         <script>
         
@@ -40,28 +40,41 @@
         var annotations = [
             {
                 note: {
-                    label: "Here is the annotation label",
-                    title: "Annotation title"
+                    label: "California has the highest number of Confirmed and Death cases.",
+					title: "",
+					width: 200
                 },
-				
-                x: 500,
-                y: 500,
+				color: "white",
+                x: 480,
+                y: 420,
                 dy: 250,
-                dx: 20
+                dx: 50
+            },
+			{
+                note: {
+                    label: "Vermont has the least number of Confirmed and Death cases.",
+					title: "",
+					width: 200
+                },
+				color: "white",
+                x: 1105,
+                y: 320,
+                dy: -60,
+                dx: -40
             }
         ]
 
 
         var maxconfirm = 0;
         var maxdeath = 0;
-        var confirm = [];
+        var confirm = []; 
         var death = [];
         var colorScale;
         var tmpcase;
         var variation;
                 
         // Add annotation to the chart
-        var makeAnnotations = d3.annotation().annotations(annotations)
+        var makeAnnotations; 
         
             //const colorScale = d3.scaleLinear().domain([0,52]).range(["#00806D", "#00BC4C", "#00F200", "#85FB44"].reverse());
         const width = 1600;
@@ -131,6 +144,7 @@
 
             d3.selectAll("input[name='rSelMap']")
                .on("click", function() {
+						  reinit();
                           rSelMapVal = this.value
                           console.log("Selected Radio:", this.value, rSelMapVal)
                           plotmap(rSelMapVal)
@@ -141,6 +155,8 @@
 
             function reinit() {
                 d3.selectAll("path").remove();
+				
+				makeAnnotations = d3.annotation().annotations(annotations)
 
                 svg = d3.select("body").append("svg")
                     .attr("width", width-100)
@@ -171,11 +187,13 @@
                     colorScale = d3.scaleLinear().domain([0, maxconfirm]).range(["white", "purple"]);
                     tmpcase = maxconfirm;
                     variation = confirm;
+					tmpcolor = "purple";
                 } else {
                     console.log("plot 1");
                     colorScale = d3.scaleLinear().domain([0, maxdeath]).range(["white", "red"]);
                     tmpcase = maxdeath;
                     variation = death;
+					tmpcolor = "red";
                 }
 
                 d3.selectAll("svg").remove();
@@ -192,6 +210,19 @@
                         .append("div")   
                         .attr("class", "tooltip")               
                         .style("opacity", 0);
+						
+		var msg1 = svg.append('text').text('Hover mouse over each state to see')
+								 .style('fill', 'pink')
+								 .style("font-size", "20px")
+								 .style("font-weight", 900)
+								 .attr('dy','0.50em')
+								 .attr('transform', 'translate(600,140)');
+		var msg2 = svg.append('text').text('the confirmed cases and death cases')
+								 .style('fill', 'pink')
+								 .style("font-size", "20px")
+								 .style("font-weight", 900)
+								 .attr('dy','0.50em')
+								 .attr('transform', 'translate(600,160)');
                     
                 // Scale the Map
                     projection = d3.geoAlbersUsa()
@@ -238,65 +269,60 @@
                     .attr("text-anchor","middle")
                     .attr('fill', 'black');
                     
-
+				svg.append("g").call(makeAnnotations);
         //https://www.visualcinnamon.com/2016/05/smooth-color-legend-d3-svg-gradient/
         //https://en.wikipedia.org/wiki/COVID-19
         //https://ndc.services.cdc.gov/case-definitions/coronavirus-disease-2019-2021/
-                //var width = 1000,height = 500;
+	
+				var w = 1400, h = 280;
+				/*
+				var key = d3.select("body")
+						.append("svg")
+						.attr("width", w)
+						.attr("height", h)
+						.attr("class", "legend");
+				*/
+				var key = svg.append("g")
+							 .attr("class", "legend");
+				var legend = key.append("defs")
+						.append("svg:linearGradient")
+						.attr("id", "gradient")
+						.attr("x1", "0%")
+						.attr("y1", "0%")
+						.attr("x2", "100%")
+						.attr("y2", "0%")
+						.attr("spreadMethod", "pad");
 
-                var lsvg = d3.select("body")
-                    .append("svg")
-                    .attr("width", width)
-                    .attr("height", 150)
-                    .attr("class", "legend");
-                    //.attr("transform", "translate(10,0)");
-                    
-                var grad = lsvg.append("defs")
-                    .append("linearGradient")
-                    .attr("id", "gradient")
-                    .attr("x1", "100%")
-                    .attr("x2", "100%")
-                    .attr("y1", "100%")
-                    .attr("y2", "100%");
-                    
-                grad.selectAll("g").append("stop")
-                    .attr("offset", "0%")
-                    .style("stop-color", "white")
-                    .style("stop-opacity", 0.6);
-
-                grad.append("stop")
-                    .attr("offset", "100%")
-                    .style("stop-color", "purple")
-                    .style("stop-opacity", 0.6);
-
-                lsvg.append("rect")
-                    .attr("x", 450)
-                    .attr("y", 20)
-                    .attr("width", 720)
-                    .attr("height", 10)
-                    .style("fill", "url(#gradient)");
-                    //.style("fill", "white");
-                    //.attr("transform", "translate(10, -140)");
-                //console.log("Debug End");
-
-                svg.append("text")
-                    .attr("x", 450)
-                    .attr("y", 790)
-                    .style("fill", "yellow")
-                    .style("font-size", "20px")
-                    .text("Gradiation of color represents number of confirmed cases from highest(red) to lowest(white).");
-
-				
-                    //console.log("try the display");
-                var axis = d3.scaleLinear().range([600,0]).domain([tmpcase,0 ]);
-                var yaxis = d3.axisBottom(axis);
-                svg.append("g")
-                        .attr("class", "y axis")
-                        .attr("transform", "translate(450,30)")
-                        .call(yaxis)
+				legend.append("stop")
+						.attr("offset", "0%")
+						.attr("stop-color", "white")
+						.attr("stop-opacity", 1);
 						
+				legend.append("stop")
+						.attr("offset", "100%")
+						.attr("stop-color", tmpcolor)
+						.attr("stop-opacity", 1);
+
+				var r_len = 600, r_h = 20
+				key.append("rect")
+						.attr("width", r_len )
+						.attr("height", r_h)
+						.style("fill", "url(#gradient)")
+						.attr("transform", "translate(450,60)");
+
+				var y = d3.scaleLinear()
+						.range([r_len, 0])
+						.domain([tmpcase, 0]);
+
+				var yAxis = d3.axisBottom(y);
+
+				key.append("g")
+						.attr("class", "y axis")
+						.attr("transform", "translate(450,80)")
+						.call(yAxis);
+
             };
-            svg.append("g").call(makeAnnotations);
+            
 			/*
             d3.select("body")
                 .append("g")
@@ -305,5 +331,8 @@
             </script>
          </center>
         </div>
-	</body>
+		<div id="legend_contents">
+		
+		</div>
+</body>
 </html>
